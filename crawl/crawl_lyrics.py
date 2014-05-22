@@ -3,6 +3,7 @@ import urllib3
 import string
 import sys
 import json
+import time
 
 # returns list of letters from a to z
 def a_to_z(upper=False, incl_hash=False):
@@ -64,12 +65,72 @@ def get_shows(import_file = None):
 	return shows
 
 	
-# given a list of shows, returns a list of songs/shows
-def get_songs(shows):
+# given a list of shows, returns an updated list of songs/shows
+def add_songs(shows):
 	for show in shows:
-		print show
+		url = show['url']
+
+		http = urllib3.PoolManager()
+
+		print "crawling " + url
+
+		backoff = 5
+		while True:	
+			try:
+				r = http.request('GET', url, timeout=urllib3.Timeout(total=5.0))
+				break
+			except urllib3.exceptions.TimeoutError:
+				print "Error: timed out on url: " + url
+				print "Sleeping for " + backoff + " seconds..."
+				
+				# exponential backoff
+				backoff = backoff ** 2
+				time.sleep(backoff)
+
+		if r.status != 200:
+			print "Error: couldn't crawl " + url
+			continue
+
+		html_doc = r.data
+		soup = bs4.BeautifulSoup(html_doc)
+
+		song_list = soup.find_all('ol', class_="st-list")
+
+		if len(song_list) != 1:
+			print "CSS Parse Error: returned show_list length != 1 for url: "+url
+
+		song_list = song_list[0].find_all('li')
+		
+		show['songs'] = []
+
+		for song in song_list:
+			grey = song.find_all('span', class_="grey")
+
+			# if the song has no lyrics
+			if grey:
+				has_lyrics = "false"
+				url = "null"
+				name = grey[0].contents[0]
+
+				if name.strip() not in ["Act 1", "Act 2", "Act 3", "BONUS TRACKS", "Act 1:", "Act 2:", "Act 3:", "Act I", "Act II", "Act III"]:
+					show['songs'].append({'url':url, 'name':name, 'has_lyrics':has_lyrics})
+
+			else:
+				a = song.find_all('a')
+
+				url = a[0]['href']
+				name = a[0].contents[0]
+				has_lyrics = "true"
+
+				show['songs'].append({'url':url, 'name':name, 'has_lyrics':has_lyrics})
+
+		show['song_count'] = len(show['songs'])
 
 
-shows = get_shows()
-get_songs(shows)
+	with open('../data/shows_w_songs.json', 'w') as outfile:
+		json.dump(shows, outfile)
+
+
+shows = get_shows(import_file="../data/shows.json")
+add_songs(shows)
 
