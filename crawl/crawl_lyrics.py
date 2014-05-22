@@ -81,8 +81,8 @@ def add_songs(shows):
 				break
 			except urllib3.exceptions.TimeoutError:
 				print "Error: timed out on url: " + url
-				print "Sleeping for " + backoff + " seconds..."
-				
+				print "Sleeping for " + str(backoff) + " seconds..."
+
 				# exponential backoff
 				backoff = backoff ** 2
 				time.sleep(backoff)
