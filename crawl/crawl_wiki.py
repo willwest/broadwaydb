@@ -5,7 +5,7 @@ import re
 
 # return list of pages in a given category
 # Note: category should contain "Category:" prefix
-def in_category(category, template_only=False, page_only=False, import_file=None):
+def in_category(category, template_only=False, page_only=False, import_file=None, export_file=None):
 	if import_file:
 		with open(import_file, 'r') as f:
 			pages = [line.strip() for line in f]
@@ -38,22 +38,38 @@ def in_category(category, template_only=False, page_only=False, import_file=None
 
 	pages = [page.encode('ascii', 'ignore') for page in pages]
 
-	with open('../data/show_list' ,'w') as outfile:
-		outfile.write('\n'.join(pages))
-		outfile.write('\n')
+	if export_file:
+		with open(export_file ,'w') as outfile:
+			outfile.write('\n'.join(pages))
+			outfile.write('\n')
 
 	return pages
 
 def format_page(page):
 	page = page.split('/')[-1]
 	page = page.replace('_', ' ')
-	page = re.sub(r'\([^)]*\)', '', page)
+	page = page.replace('(musical)', '')
+	page = page.replace('(Musical)', '')
+	page = page.replace('(opera)', '')
+	page = page.replace('(Opera)', '')
+	page = page.strip()
 
 	return page
 
-def get_infobox_data(page):
+def get_infobox_data(page, broadway_pages, off_broadway_pages):
 	show = {}
 	base = "http://dbpedia.org/data/"
+
+	if page in off_broadway_pages:
+		off_broadway = 'true'
+	else:
+		off_broadway = 'false'
+
+	if page in broadway_pages:
+		broadway = 'true'
+	else:
+		broadway = 'false'
+
 	page = page.replace(' ', '_')
 	uri = base + page + ".json"
 
@@ -61,20 +77,29 @@ def get_infobox_data(page):
 
 	print uri
 
-	backoff = 2
+	retries = 0
+
 	while True:
 		try:
 			response = http.request('GET', uri, timeout=urllib3.Timeout(total=5.0))
 			break
 		except urllib3.exceptions.TimeoutError:
 			print "Error: timed out on url: " + uri
+
+			retries += 1
+			backoff = 2 ** retries
+
 			print "Sleeping for " + str(backoff) + " seconds..."
 
 			time.sleep(backoff)
-			backoff = backoff ** 2
 
 	response = json.loads(response.data)
-	
+
+	if not response:
+		print "Error: no data found"
+		show = {'page_name':page, 'on_dbpedia':'false', 'name':'null', 'productions':[], 'abstract':'null', 'music':'null', 'lyrics':'null', 'book':'null', 'off_broadway':off_broadway, 'broadway':broadway}
+		return show
+
 	primary_key = [{'key':key, 'length':len(response[key].keys())} for key in response.keys()]
 
 	max_len = -1
@@ -85,42 +110,76 @@ def get_infobox_data(page):
 			good_key = key['key']
 
 
-	response = response[good_key]	
+	response = response[good_key]
+
+	show["on_dbpedia"] = 'true'
+
+	show["page_name"] = page
+
+	show["broadway"] = broadway
+	show["off_broadway"] = off_broadway
 
 	# Name
-	show["name"] = response["http://xmlns.com/foaf/0.1/name"][0]["value"]
+	if "http://xmlns.com/foaf/0.1/name" in response:
+		show["name"] = format_page(response["http://xmlns.com/foaf/0.1/name"][0]["value"])
+	elif "http://www.w3.org/2000/01/rdf-schema#label" in response:
+		show["name"] = format_page(response["http://www.w3.org/2000/01/rdf-schema#label"][0]["value"])
+	else:
+		show["name"] = format_page(page)
+
 	# show["comment"] = response["http://www.w3.org/2000/01/rdf-schema#comment"][0]["value"]
 	
 	# Productions
 	if "http://dbpedia.org/property/productions" in response:
 		show["productions"] = [production["value"] for production in response["http://dbpedia.org/property/productions"] if len(str(production["value"]))==4]
+	else:
+		show["productions"] = []
 
 	# Abstract
 	if "http://dbpedia.org/ontology/abstract" in response:
 		show["abstract"] = response["http://dbpedia.org/ontology/abstract"][0]["value"]
+	else:
+		show["abstract"] = "null"
 
 	# Music By
 	if "http://dbpedia.org/property/music" in response:
 		show["music"] = format_page(response["http://dbpedia.org/property/music"][0]["value"])
-	
 	elif "http://dbpedia.org/ontology/musicBy" in response:
 		show["music"] = format_page(response["http://dbpedia.org/ontology/musicBy"][0]["value"])
+	else:
+		show["music"] = "null"
 
 	# Lyrics
 	if "http://dbpedia.org/property/lyrics" in response:
 		show["lyrics"] = format_page(response["http://dbpedia.org/property/lyrics"][0]["value"])
+	else:
+		show["lyrics"] = "null"
 
 	# Book
 	if "http://dbpedia.org/property/book" in response:
 		show["book"] = format_page(response["http://dbpedia.org/property/book"][0]["value"])
+	else:
+		show["book"] = "null"
 
 	return show
 
 
-pages = in_category(import_file = "../data/show_list", category="Category:Broadway_musicals", page_only=True)
+broadway_pages = in_category(export_file = "../data/broadway_shows", category="Category:Broadway_musicals", page_only=True)
 
-pages = [get_infobox_data(page) for page in pages]
+off_broadway_pages = in_category(export_file = "../data/off_broadway_shows", category="Category:Off-Broadway_musicals", page_only=True)
+
+# get all unique pages from both sets
+all_pages = list(set(broadway_pages + off_broadway_pages))
+all_pages.sort()
+
+# write all pages to file
+with open("../data/all_shows" ,'w') as outfile:
+	outfile.write('\n'.join(all_pages))
+	outfile.write('\n')
+
+# get data for each page
+all_pages = [get_infobox_data(page, broadway_pages, off_broadway_pages) for page in all_pages]
 
 with open('../data/wiki_data', 'w') as outfile:
-	json.dump(pages, outfile)
-	
+	json.dump(all_pages, outfile)
+

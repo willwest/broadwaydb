@@ -15,6 +15,25 @@ def a_to_z(upper=False, incl_hash=False):
 	return letters
 
 
+# Given a url, make a GET request with exponential backoff
+def make_request(url):
+	http = urllib3.PoolManager()
+
+	backoff = 5
+	while True:	
+		try:
+			r = http.request('GET', url, timeout=urllib3.Timeout(total=5.0))
+			if r.status != 200:
+				raise IOError("Error: couldn't crawl " + url)
+			return r.data
+		except urllib3.exceptions.TimeoutError:
+			print "Error: timed out on url: " + url
+			print "Sleeping for " + str(backoff) + " seconds..."
+
+		# exponential backoff
+		backoff = 2 ** backoff
+		time.sleep(backoff)
+
 # returns a dict of shows
 def get_shows(import_file = None):
 
@@ -25,20 +44,17 @@ def get_shows(import_file = None):
 			return data
 
 	base = "http://www.allmusicals.com/"
-	http = urllib3.PoolManager()
 	shows = []
 
 	for letter in a_to_z(incl_hash=True):
 		url = base + letter + ".htm"
 		print url
-		r = http.request('GET', url)
+		
+		try:
+			html_doc = make_request(url)
+		except:
+			continue
 
-		# if url is not valid
-		if r.status != 200:
-			print "Error: couldn't crawl " + url
-			sys.exit()
-
-		html_doc =  r.data
 		soup = bs4.BeautifulSoup(html_doc)
 		show_list = soup.find_all("ul", class_="symz")
 
@@ -70,28 +86,13 @@ def add_songs(shows):
 	for show in shows:
 		url = show['url']
 
-		http = urllib3.PoolManager()
-
 		print "crawling " + url
 
-		backoff = 5
-		while True:	
-			try:
-				r = http.request('GET', url, timeout=urllib3.Timeout(total=5.0))
-				break
-			except urllib3.exceptions.TimeoutError:
-				print "Error: timed out on url: " + url
-				print "Sleeping for " + str(backoff) + " seconds..."
-
-				# exponential backoff
-				backoff = backoff ** 2
-				time.sleep(backoff)
-
-		if r.status != 200:
-			print "Error: couldn't crawl " + url
+		try:
+			html_doc = make_request(url)
+		except:
 			continue
 
-		html_doc = r.data
 		soup = bs4.BeautifulSoup(html_doc)
 
 		song_list = soup.find_all('ol', class_="st-list")
@@ -131,6 +132,38 @@ def add_songs(shows):
 		json.dump(shows, outfile)
 
 
-shows = get_shows(import_file="../data/shows.json")
-add_songs(shows)
+def add_lyrics(shows):
+	for show in shows:
+		for song in show["songs"]:
+			if song["has_lyrics"] == "true":
+				try:
+					print "Crawling " + song["url"]
+					html_doc = make_request(song["url"])
+					soup = bs4.BeautifulSoup(html_doc)
+					soup = soup.find_all(id='page')
 
+					if len(soup) < 1:
+						print "Error: no lyrics found"
+						song["has_lyrics"] = "false"
+						continue
+
+					# Remove invisible title
+					soup[0].h2.extract()
+
+					# Extract text
+					lyrics = soup[0].get_text().strip()
+
+					song["lyrics"] = lyrics
+
+				except IOError:
+					continue
+
+	with open('../data/shows_w_songs_w_lyrics.json', 'w') as outfile:
+		json.dump(shows, outfile)
+
+	return shows
+
+shows = get_shows(import_file="../data/shows_w_songs.json")
+
+# add_songs(shows)
+add_lyrics(shows)
