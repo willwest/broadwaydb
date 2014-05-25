@@ -119,11 +119,20 @@ def combine_data(dict1, dict2):
 			dict1[key] = dict2[key]
 
 	# Manually put in the entries with a duplicate key name in dict1
-	if "lyrics" in dict2:
-		dict1["lyrics_by"] = dict2["lyrics"]
-
 	if "name" in dict2:
 		dict1["wiki_name"] = dict2["name"]
+
+	# Add an entry for number of songs missing lyrics
+	num_songs = dict1["song_count"]
+	num_with_lyrics = 0
+	for song in dict1["songs"]:
+		if song["has_lyrics"] == "true":
+			num_with_lyrics += 1
+
+	dict1["without_lyrics_count"] = num_songs - num_with_lyrics
+
+	# Add an entry for number of songs with lyrics
+	dict1["with_lyrics_count"] = num_with_lyrics
 
 
 with open('../data/shows_w_songs_w_lyrics.json.formatted', 'r') as f:
