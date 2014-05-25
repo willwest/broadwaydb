@@ -45,8 +45,18 @@ def in_category(category, template_only=False, page_only=False, import_file=None
 
 	return pages
 
-def format_page(page):
+def format_url(page):
 	page = page.split('/')[-1]
+	page = page.replace('_', ' ')
+	page = page.replace('(musical)', '')
+	page = page.replace('(Musical)', '')
+	page = page.replace('(opera)', '')
+	page = page.replace('(Opera)', '')
+	page = page.strip()
+
+	return page
+
+def format_page(page):
 	page = page.replace('_', ' ')
 	page = page.replace('(musical)', '')
 	page = page.replace('(Musical)', '')
@@ -97,7 +107,7 @@ def get_infobox_data(page, broadway_pages, off_broadway_pages):
 
 	if not response:
 		print "Error: no data found"
-		show = {'page_name':page, 'on_dbpedia':'false', 'name':'null', 'productions':[], 'abstract':'null', 'music':'null', 'lyrics':'null', 'book':'null', 'off_broadway':off_broadway, 'broadway':broadway}
+		show = {'page_name':page, 'on_dbpedia':'false', 'name':format_page(page), 'productions':[], 'abstract':'null', 'music':'null', 'lyrics':'null', 'book':'null', 'off_broadway':off_broadway, 'broadway':broadway}
 		return show
 
 	primary_key = [{'key':key, 'length':len(response[key].keys())} for key in response.keys()]
@@ -120,12 +130,12 @@ def get_infobox_data(page, broadway_pages, off_broadway_pages):
 	show["off_broadway"] = off_broadway
 
 	# Name
-	if "http://xmlns.com/foaf/0.1/name" in response:
-		show["name"] = format_page(response["http://xmlns.com/foaf/0.1/name"][0]["value"])
-	elif "http://www.w3.org/2000/01/rdf-schema#label" in response:
-		show["name"] = format_page(response["http://www.w3.org/2000/01/rdf-schema#label"][0]["value"])
-	else:
-		show["name"] = format_page(page)
+	# if "http://xmlns.com/foaf/0.1/name" in response:
+	# 	show["name"] = format_url(response["http://xmlns.com/foaf/0.1/name"][0]["value"])
+	# elif "http://www.w3.org/2000/01/rdf-schema#label" in response:
+	# 	show["name"] = format_url(response["http://www.w3.org/2000/01/rdf-schema#label"][0]["value"])
+	# else:
+	show["name"] = format_page(page)
 
 	# show["comment"] = response["http://www.w3.org/2000/01/rdf-schema#comment"][0]["value"]
 	
@@ -143,21 +153,21 @@ def get_infobox_data(page, broadway_pages, off_broadway_pages):
 
 	# Music By
 	if "http://dbpedia.org/property/music" in response:
-		show["music"] = format_page(response["http://dbpedia.org/property/music"][0]["value"])
+		show["music"] = format_url(response["http://dbpedia.org/property/music"][0]["value"])
 	elif "http://dbpedia.org/ontology/musicBy" in response:
-		show["music"] = format_page(response["http://dbpedia.org/ontology/musicBy"][0]["value"])
+		show["music"] = format_url(response["http://dbpedia.org/ontology/musicBy"][0]["value"])
 	else:
 		show["music"] = "null"
 
 	# Lyrics
 	if "http://dbpedia.org/property/lyrics" in response:
-		show["lyrics"] = format_page(response["http://dbpedia.org/property/lyrics"][0]["value"])
+		show["lyrics"] = format_url(response["http://dbpedia.org/property/lyrics"][0]["value"])
 	else:
 		show["lyrics"] = "null"
 
 	# Book
 	if "http://dbpedia.org/property/book" in response:
-		show["book"] = format_page(response["http://dbpedia.org/property/book"][0]["value"])
+		show["book"] = format_url(response["http://dbpedia.org/property/book"][0]["value"])
 	else:
 		show["book"] = "null"
 
