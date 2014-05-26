@@ -22,7 +22,7 @@ def songs_csv(shows, export_file = None):
 		"book",
 		"broadway",
 		"id",
-		"lyrics",
+		# "lyrics",
 		"music",
 		# "name",
 		"off_broadway",
@@ -61,6 +61,7 @@ def songs_csv(shows, export_file = None):
 					else:
 						row[key] = song[key]
 
+				row["lyrics_by"] = show["lyrics"].encode('ascii', 'ignore')
 				row["show_name"] = show["name"].encode('ascii', 'ignore')
 				row["show_url"] = show["url"].encode('ascii', 'ignore')
 
@@ -83,7 +84,7 @@ def shows_csv(shows, export_file = None):
 		"book",
 		"broadway",
 		"id",
-		"lyrics",
+		# "lyrics",
 		"music",
 		# "name",
 		"off_broadway",
@@ -108,6 +109,7 @@ def shows_csv(shows, export_file = None):
 				else:
 					row[key] = show[key]
 
+			row["lyrics_by"] = show["lyrics"].encode('ascii', 'ignore')
 			row["show_name"] = show["name"].encode('ascii', 'ignore')
 			row["show_url"] = show["url"].encode('ascii', 'ignore')
 

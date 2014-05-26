@@ -1,2 +1,17 @@
+# Python
+*.pyc
+
+# R
+.RData
+.Rhistory
+
+# tmp files
+/crawl/tmp
+
+# secret keys
+API_KEYS.json
+spotify_appkey.key
+
+# data/binary directories
 data/
 figures/

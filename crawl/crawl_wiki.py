@@ -129,15 +129,7 @@ def get_infobox_data(page, broadway_pages, off_broadway_pages):
 	show["broadway"] = broadway
 	show["off_broadway"] = off_broadway
 
-	# Name
-	# if "http://xmlns.com/foaf/0.1/name" in response:
-	# 	show["name"] = format_url(response["http://xmlns.com/foaf/0.1/name"][0]["value"])
-	# elif "http://www.w3.org/2000/01/rdf-schema#label" in response:
-	# 	show["name"] = format_url(response["http://www.w3.org/2000/01/rdf-schema#label"][0]["value"])
-	# else:
 	show["name"] = format_page(page)
-
-	# show["comment"] = response["http://www.w3.org/2000/01/rdf-schema#comment"][0]["value"]
 	
 	# Productions
 	if "http://dbpedia.org/property/productions" in response:
