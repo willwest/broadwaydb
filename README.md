@@ -1,4 +1,7 @@
 # Broadway (and Off-Broadway) Musical Analysis
+The goal of this project is to better understand the measurable
+characteristics of musicals, and the patterns that emerge among different
+types of shows.
 
 # Table of Contents
 * [Source](#source)
@@ -23,10 +26,6 @@ patterns that emerge between different composers and artists.
 
 
 # Background
-The goal of this project is to better understand the measurable
-characteristics of musicals, and the patterns that emerge among different
-types of shows.
-
 While there has been a lot of work done in analyzing music in
 general, often musicals are lumped into the soundtrack category without 
 specific attention given to their unique characteristics. This results in 
