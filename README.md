@@ -1,12 +1,12 @@
 ## Broadway (and Off-Broadway) Musical Analysis
 
-<hr>
-
 ### Table of Contents
 * [Source](#source)
 * [Developers](#developers)
 * [Background](#background)
 * [Data Collection](#data-collection)
+
+<hr>
 
 ### Source
 This project currently consists of three modules:
