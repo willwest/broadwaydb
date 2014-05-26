@@ -1,29 +1,29 @@
-# Broadway (and Off-Broadway) Musical Analysis
+## Broadway (and Off-Broadway) Musical Analysis
 
 <hr>
 
-## Table of Contents
+### Table of Contents
 * [Source](#source)
 * [Developers](#developers)
 * [Background](#background)
 * [Data Collection](#data-collection)
 
-## Source
+### Source
 This project currently consists of three modules:
 * `crawl`: code for scraping lyrics and accessing APIs
 * `munge`: scripts for formatting and joining data
 * `analysis`: R code for data exploration
 
-## Developers
+### Developers
 * "Will West" wmw71190@gmail.com
 
-## Data Collection
+### Data Collection
 For this project, several types of data are needed. First, lyrics are needed
 to capture the topics and lexical characteristics of each song and show.
 Metadata about each show and song is also necessary, so we can model the
 patterns that emerge between different composers and artists.
 
-## Background
+### Background
 The goal of this project is to better understand the measurable
 characteristics of musicals, and the patterns that emerge among different
 types of shows.
@@ -34,9 +34,9 @@ specific attention given to their unique characteristics. This results in
 recommendation systems and music discovery applications that don't properly
 capture a user's tastes when it comes to musicals.
 
-### What makes musicals unique?
+#### What makes musicals unique?
 
-#### Subject matter
+##### Subject matter
 Musicals tend to delve heavily into one or more topics that may set it apart
 from other musicals. While lyrics in traditional genres may address specific
 emotions (love, anger, etc.) or cultures (pop culture, politics, etc.),
@@ -45,7 +45,7 @@ the popular broadway musical Next to Normal. The entire musical is focused
 on mental health, treatments, and the way both can positively and negatively
 impact a family.
 
-#### Composer, Lyricist, Artist Loyalties/Preferences
+##### Composer, Lyricist, Artist Loyalties/Preferences
 While traditionally albums are composed and performed by a single artist, 
 musicals often are composed by a single composer and performed by several
 different artists. A listener's opinion of a musical album may be impacted
