@@ -9,6 +9,9 @@ KEYS = api_keys.get_keys()
 
 logged_in_event = threading.Event()
 
+def pretty_print(obj):
+	print json.dumps(obj, sort_keys=True, indent=4, separators=(',',': '))
+
 def connection_state_listener(session):
 	if session.connection.state is spotify.ConnectionState.LOGGED_IN:
 		logged_in_event.set()
@@ -31,13 +34,21 @@ logged_in_event.wait()
 
 print "Logged in and waiting..."
 
-# Given a target string and a list of candidate strings, return the best 
-# matching candidate
+
+def score(target, item):
+	target = target.lower()
+	item = item.lower()
+
+	return nltk.metrics.edit_distance(target, item)*1.0 / len(target)
+
 def match(target, candidate_list, distance_only=False):
+	""" Given a target string and a list of candidate strings, return the best 
+	matching candidate.
+	"""
 	distances = []
 
 	for item in candidate_list:
-		dist = nltk.metrics.edit_distance(target, item)*1.0 / len(target)
+		dist = score(target, item)
 		distances.append(dist)
 
 	if distance_only:
@@ -47,6 +58,14 @@ def match(target, candidate_list, distance_only=False):
 	return distances.index(min(distances))
 
 def search_score(target_tracks, matching_tracks):
+	""" Given a list of track names to be matched, and a list of matching
+	tracks, returns a score that approximates the confidence that the match
+	is valid.
+
+	The score is based on the average of the edit distance between each target
+	track and its best match, offset by the difference in the length of each
+	list.
+	"""
 	distances = []
 
 	for target in target_tracks:
@@ -59,7 +78,7 @@ def search_score(target_tracks, matching_tracks):
 def search_for_album(query):
 	scores = []
 
-	print 'Searching for "{}"'.format(query)
+	print '\nSearching for "{}"'.format(query)
 
 	search = session.search(query)
 
@@ -78,7 +97,7 @@ def search_for_album(query):
 		browser = album.browse().load()
 		tracks = browser.tracks
 
-		track_names = [track.name for track in tracks]
+		track_names = [clean_track_name(track.name, album) for track in tracks]
 		target_names = [song["name"] for song in show["songs"]]
 		
 		score = search_score(target_names, track_names)
@@ -89,51 +108,123 @@ def search_for_album(query):
 
 	return album_results[scores.index(min(scores))]
 
+def ascii(s):
+	return s.encode('ascii', 'ignore')
+
+def add_spotify_song_data(song, spotify_track):
+	song["spotify_popularity"] = spotify_track.popularity
+	song["spotify_duration"] = spotify_track.duration / 1000
+	song["spotify_track"] = str(spotify_track.link)
+	song["spotify_track_name"] = clean_track_name(spotify_track.name, spotify_track.album)
+	song["spotify_match_score"] = match_score
+
+	artists= [str(artist.link) for artist in spotify_track.artists]
+	artist_names = [ascii(artist.name) for artist in spotify_track.artists]
+	song["spotify_artists"] = artists
+	song["spotify_artist_names"] = artist_names
+
+	song["spotify_track_index"] = spotify_track.index
+
+def add_spotify_album_data(album, spotify_album):
+	# Save the cover art file found on Spotify
+	cover_art_file = '../data/cover_art/'+str(spotify_album.link)+'.jpg'
+	open(cover_art_file,'w+').write(spotify_album.cover().load().data)
+
+	# Record album-specific data
+	show["show_on_spotify"] = True
+	show["spotify_album"] = str(spotify_album.link)
+	show["spotify_album_year"] = spotify_album.year
+	show["spotify_album_artist"] = ascii(spotify_album.artist.name)
+	show["spotify_cover_art"] = cover_art_file
+
+
+def clean_track_name(track_name, album):
+	track_name = ascii(track_name).lower()
+	album_name = ascii(album.name).lower().replace(' the musical','')
+
+	# Remove "(From "[show_name]")" from track name if present
+	track_name = track_name.replace('(from "{}")'.format(album_name),'')
+
+	# Remove "- Musical "[show_name]"" from track name if present
+	track_name = track_name.replace(' - musical "{}"'.format(album_name),'')
+
+	# Remove " - feat.*" if present
+	track_name = track_name.split(" - feat. ")[0]
+
+	return track_name
+
+
 with open('../data/shows_combined.json.matched', 'r') as f:
 	data = json.load(f)
 
 for show in data:
 	show_name = show["name"]
-	
-	print show_name
 
+	# Try to search Spotify for the album. If no suitable matches are found,
+	# note that the album was not found on Spotify and move on.
 	try:
 		album = search_for_album(show_name)
 	except StandardError as e:
+		show["show_on_spotify"] = False
 		print e
 		continue
 
+	# Load the album, get the track list, and produce a list of track names
+	# on the Spotify album
 	album.load()
 	browser = album.browse().load()
 	tracks = browser.tracks
-	track_names = [track.name for track in tracks]
+	track_names = [clean_track_name(track.name, album) for track in tracks]
 
+	show["spotify_song_count"] = len(track_names)
+
+	add_spotify_album_data(show, album)
+
+	# Keep track of any songs that we find on spotify that we didn't have
+	# saved before
+	new_songs = []
+
+	# For each song in the show, find a match from the track list. 
 	for song in show["songs"]:
 		track_index = match(song["name"], track_names)
-		track = tracks[track_index]
-		print '"{}", "{}"'.format(
-			song["name"].encode('ascii','ignore'), track.name)
-	# cover_art_file = '../data/cover_art/'+str(album.link)+'.jpg'
-	# open(cover_art_file,'w+').write(album.cover().load().data)
+		matching_track = tracks[track_index]
+		matching_track_name = clean_track_name(matching_track.name, album)
 
-	# # Record album-specific data
-	# show["spotify_album"] = str(album.link)
-	# show["album_year"] = album.year
-	# show["album_artist"] = album.artist.name
-	# show["cover_art"] = cover_art_file
+		song_name = ascii(song["name"])
 
-	# for song in show["songs"]:
-	# 	track_index = match(song["name"], track_names)
-	# 	track = tracks[track_index]
+		match_score = score(song_name,matching_track_name)
 
-	# 	song["popularity"] = track.popularity
-	# 	song["duration"] = track.duration / 1000
-	# 	song["spotify_track"] = str(track.link)
-	# 	song["spotify_artists"] = [str(artist.link) for artist in track.artists]
-	# 	song["track_index"] = track.index
-	# 	print song
-	# print album
+		print '\t"{}", "{}": {}'.format(
+			song_name, matching_track_name, match_score)
+
+		if match_score < .7:
+			song["song_on_allmusicals"] = True
+			song["song_on_spotify"] = True
+
+			add_spotify_song_data(song, matching_track)
+			
+		else:
+			new_song = {}
+			song["song_on_spotify"] = False
+			song["song_on_allmusicals"] = True
+
+			new_song["song_on_spotify"] = True
+			new_song["song_on_allmusicals"] = False
+
+			add_spotify_song_data(new_song, matching_track)
+
+			collected = [s["spotify_track"] for s in new_songs]
+			
+			if new_song["spotify_track"] not in collected:
+				new_songs.append(new_song)
+
+	collected = [s["spotify_track"] for s in show["songs"] 
+					if "spotify_track" in s]
+	new_songs = [s for s in new_songs if s["spotify_track"] not in collected]
+
+	show["songs"].extend(new_songs)
 
 
-
+with open('../data/shows_w_spotify.json', 'w') as outfile:
+	json.dump(data, outfile)
 
