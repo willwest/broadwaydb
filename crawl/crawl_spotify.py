@@ -1,6 +1,7 @@
 import spotify
 import threading
 import json
+import os
 import nltk.metrics.agreement
 import api_keys
 
@@ -33,6 +34,13 @@ session.login(KEYS["SPOTIFY_USERNAME"],KEYS["SPOTIFY_PASSWORD"])
 logged_in_event.wait()
 
 print "Logged in and waiting..."
+
+# Return the greatest common suffix in a list of strings
+def greatest_common_suffix(list_of_strings):
+	reversed_strings = [' '.join(s.split()[::-1]) for s in list_of_strings]
+	reversed_gcs = os.path.commonprefix(reversed_strings)
+	gcs = ' '.join(reversed_gcs.split()[::-1])
+	return gcs
 
 
 def score(target, item):
@@ -97,7 +105,7 @@ def search_for_album(query):
 		browser = album.browse().load()
 		tracks = browser.tracks
 
-		track_names = [clean_track_name(track.name, album) for track in tracks]
+		track_names = [clean_track_name(track.name, album, browser) for track in tracks]
 		target_names = [song["name"] for song in show["songs"]]
 		
 		score = search_score(target_names, track_names)
@@ -115,7 +123,7 @@ def add_spotify_song_data(song, spotify_track):
 	song["spotify_popularity"] = spotify_track.popularity
 	song["spotify_duration"] = spotify_track.duration / 1000
 	song["spotify_track"] = str(spotify_track.link)
-	song["spotify_track_name"] = clean_track_name(spotify_track.name, spotify_track.album)
+	song["spotify_track_name"] = spotify_track.name
 	song["spotify_match_score"] = match_score
 
 	artists= [str(artist.link) for artist in spotify_track.artists]
@@ -138,9 +146,19 @@ def add_spotify_album_data(album, spotify_album):
 	show["spotify_cover_art"] = cover_art_file
 
 
-def clean_track_name(track_name, album):
+def clean_track_name(track_name, album, browser):
+	browser = album.browse().load()
+	tracks = browser.tracks
+	track_names = [track.name for track in tracks]
+
+	gcs = greatest_common_suffix(track_names)
+
 	track_name = ascii(track_name).lower()
 	album_name = ascii(album.name).lower().replace(' the musical','')
+
+	# Remove greatest common suffix if large enough
+	if len(gcs) > 3:
+		track_name = track_name.replace(gcs.lower(), '')
 
 	# Remove "(From "[show_name]")" from track name if present
 	track_name = track_name.replace('(from "{}")'.format(album_name),'')
@@ -174,7 +192,7 @@ for show in data:
 	album.load()
 	browser = album.browse().load()
 	tracks = browser.tracks
-	track_names = [clean_track_name(track.name, album) for track in tracks]
+	track_names = [clean_track_name(track.name, album, browser) for track in tracks]
 
 	show["spotify_song_count"] = len(track_names)
 
@@ -188,7 +206,7 @@ for show in data:
 	for song in show["songs"]:
 		track_index = match(song["name"], track_names)
 		matching_track = tracks[track_index]
-		matching_track_name = clean_track_name(matching_track.name, album)
+		matching_track_name = clean_track_name(matching_track.name, album, browser)
 
 		song_name = ascii(song["name"])
 
