@@ -83,20 +83,21 @@ def search_score(target_tracks, matching_tracks):
 	return (sum(distances) / len(distances)) + abs(len(target_tracks)-
 		len(matching_tracks))/len(distances)
 
-def search_for_album(query):
-	scores = []
-
-	print '\nSearching for "{}"'.format(query)
-
+def search_for_album(show):
+	query = show["name"]
 	search = session.search(query)
 
-	# Assume that the first search result is the best. Should change this
-	# to a better method.
+	# Execute search query
 	search = search.load()
 	album_results = search.albums
 
+	print '\nSearching for "{}"'.format(query)
+
+	# If we find no results, report error
 	if len(album_results) == 0:
 		raise StandardError("Error: no search results found.")
+
+	scores = []
 
 	for album in album_results:
 		album.load()
@@ -105,12 +106,19 @@ def search_for_album(query):
 		browser = album.browse().load()
 		tracks = browser.tracks
 
+		# Get lists of candidate album's track names and
+		# the actual track names
 		track_names = [clean_track_name(track.name, album, browser) for track in tracks]
 		target_names = [song["name"] for song in show["songs"]]
 		
+		# Obtain a similarity score between the two lists
 		score = search_score(target_names, track_names)
+
+		# Save the score
 		scores.append(score)
 
+	# If none of the results have an acceptable score, report
+	# an error
 	if min(scores) > .3:
 		raise StandardError("Error: no results above threshold")
 
@@ -181,7 +189,7 @@ for show in data:
 	# Try to search Spotify for the album. If no suitable matches are found,
 	# note that the album was not found on Spotify and move on.
 	try:
-		album = search_for_album(show_name)
+		album = search_for_album(show)
 	except StandardError as e:
 		show["show_on_spotify"] = False
 		print e

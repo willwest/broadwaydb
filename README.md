@@ -4,10 +4,14 @@ characteristics of musicals, and the patterns that emerge among different
 types of shows.
 
 # Table of Contents
+* [Blog Posts](#blog-posts)
 * [Source](#source)
 * [Developers](#developers)
 * [Background](#background)
 * [Data Collection](#data-collection)
+
+# Blog Posts
+* [A Statistical Analysis of Broadway (and Off-Broadway) Musicals](http://willwest.me/a-statistical-analysis-of-broadway-and-off-broadway-musicals.html)
 
 # Source
 This project currently consists of three modules:

@@ -86,21 +86,32 @@ def add_song_features(song):
 	# against the duration of the track
 	lyrics = song["lyrics"]
 	lyrics = lyrics.replace('\n', ' ')
+
+	words = lyrics.split()
+	unique_words = list(set(words))
+
 	num_syllables = count_syllables(lyrics)[0]
 	song["syllable_count"] = num_syllables
 	song["word_count"] = len(lyrics.split())
 	song["song_density"] = num_syllables * 1.0 / song["spotify_duration"]
+	song["song_unique_words"] = len(unique_words)
+	song["song_word_count"] = len(words)
+	song["song_diversity"] = song["song_unique_words"]*1.0 / song["song_word_count"]
+	song["lyrics"] = song["lyrics"].replace('\n',' ')
 
 def add_show_features(show):
 
+	num_songs = 0
 	lyrics = ""
+	popularity = 0
 	duration = 0
 
 	for song in show["songs"]:
 		if song["song_on_spotify"] == True and "has_lyrics" in song and song["has_lyrics"]=="true":
+			num_songs+=1
+			popularity += song["spotify_popularity"]
 			add_song_features(song)
-			lyrics = lyrics.replace('\n', ' ')
-			lyrics = lyrics + " " + song["lyrics"]
+			lyrics = lyrics + " " + song["lyrics"].replace('\n', ' ')
 			duration += song["spotify_duration"]
 
 
@@ -108,6 +119,7 @@ def add_show_features(show):
 	words = lyrics.split()
 	unique_words = list(set(words))
 
+	show["show_popularity"] = popularity*1.0 / num_songs
 	show["num_unique_words"] = len(unique_words)
 	show["show_lyrics"] = lyrics
 	show["show_syllable_count"] = count_syllables(lyrics)[0]
@@ -145,7 +157,9 @@ def songs_csv(shows, export_file = None):
 		"show_syllable_count",
 		"show_word_count",
 		"album_duration",
-		"show_density"
+		"show_density",
+		"show_popularity",
+		"spotify_album_year"
 	]
 
 	song_data = [
@@ -158,7 +172,10 @@ def songs_csv(shows, export_file = None):
 		"spotify_popularity",
 		"song_density",
 		"syllable_count",
-		"word_count"
+		"word_count",
+		"song_unique_words",
+		"song_word_count",
+		"song_diversity"
 		# "name",
 		# "url",
 	]
