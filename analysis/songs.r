@@ -29,7 +29,7 @@ shows <- unique(shows)
 
 # Return a vector of stopwords from an external file
 get.stopwords <- function(){
-  words <- read.table('stopwords.txt', sep='\n', stringsAsFactors=FALSE)
+  words <- read.table('../data/stopwords.txt', sep='\n', stringsAsFactors=FALSE)
   return(words)
 }
 
@@ -106,7 +106,7 @@ p <- ggplot(show.popularity, aes(x=reorder(show_name,show_popularity), y=show_po
   ylab("Spotify Popularity") + 
   scale_colour_brewer() + 
   scale_fill_continuous(name="Album Year")
-ggsave("show_popularity.png", plot=p, width=10, height=16)
+ggsave("../figures/show_popularity.png", plot=p, width=10, height=16)
 
 # Which songs are most repetitive?
 song.repetition <- songs[,c("song_name", "show_name", "song_diversity", "song_word_count")]
