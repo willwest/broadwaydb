@@ -110,14 +110,15 @@ ggsave("../figures/show_popularity.png", plot=p, width=10, height=16)
 
 # Which songs are most repetitive?
 song.repetition <- songs[,c("song_name", "show_name", "song_diversity", "song_word_count")]
-song.repetition$song_diversity = 1 - song.repetition$song_diversity
+# song.repetition$song_diversity = 1 - song.repetition$song_diversity
 song.repetition <- subset(song.repetition, song_word_count>100)
-song.repetition <- song.repetition[order(-song.repetition$song_diversity),]
+song.repetition <- song.repetition[order(song.repetition$song_diversity),]
 song.repetition <- song.repetition[1:20,]
-ggplot(song.repetition, aes(x=reorder(paste(song_name,show_name, sep=', '), song_diversity), y=song_diversity)) + 
+ggplot(song.repetition, aes(x=reorder(paste(song_name,show_name, sep=', '), -song_diversity), y=song_diversity)) + 
   xlab("") + 
-  ylab("Repetitiousness") + 
-  geom_bar(stat="identity") + 
+  ylab("Lyrics Diversity") + 
+  geom_bar(stat="identity") +
+  scale_colour_brewer() +
   coord_flip()
 
 # Which shows are most repetitive?
@@ -125,6 +126,8 @@ show.repetition <- shows[,c("show_name", "vocab_diversity")]
 show.repetition <- show.repetition[order(show.repetition$vocab_diversity),]
 show.repetition <- show.repetition[1:20,]
 ggplot(show.repetition, aes(x=reorder(show_name, -vocab_diversity), y=vocab_diversity)) +
+  xlab("") + 
+  ylab("Lyrics Diversity") + 
   geom_bar(stat="identity") + 
   coord_flip()
 

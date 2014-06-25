@@ -129,6 +129,40 @@ def add_show_features(show):
 	show["vocab_diversity"] = show["num_unique_words"]*1.0 / show["show_word_count"]
 
 
+def is_valid_show(show):
+
+	if show["without_lyrics_count"] != 0:
+		return False
+	elif show["on_dbpedia"] != "true":
+		return False
+	elif show["show_on_spotify"] == False:
+		return False
+
+	num_tracks = show["spotify_song_count"]
+	songs_w_echonest = [song for song in show["songs"] if song["on_echonest"]]
+
+	echonest_track_count = len(songs_w_echonest)
+	percent_w_echonest = echonest_track_count * 1.0 / num_tracks
+	
+	if percent_w_echonest < .80:
+		return False
+	
+	return True
+
+def is_valid_song(song):
+	if song["song_on_spotify"] == False:
+		return False
+	elif "has_lyrics" not in song:
+		return False
+	elif song["has_lyrics"] != "true":
+		return False
+	elif not song["on_echonest"]:
+		return False
+	elif not song["audio_summary"]:
+		return False
+
+	return True
+
 # Return a list (CSV) where each item (row) reperesents a song
 def songs_csv(shows, export_file = None):
 	results = []
@@ -180,11 +214,26 @@ def songs_csv(shows, export_file = None):
 		# "url",
 	]
 
+	audio_summary = [
+		"mode",
+		"valence",
+		"loudness",
+		"duration",
+		"time_signature",
+		"key",
+		"tempo",
+		"energy",
+		"liveness",
+		"speechiness",
+		"acousticness",
+		"danceability"
+	]
+
 	for show in shows:
-		if show["without_lyrics_count"] == 0 and show["on_dbpedia"] == "true" and show["show_on_spotify"] == True:
+		if is_valid_show(show):
 			add_show_features(show)
 			for song in show["songs"]:
-				if song["song_on_spotify"] == True and "has_lyrics" in song and song["has_lyrics"]=="true":
+				if is_valid_song(song):
 					row = {}
 
 					for key in show_data:
@@ -198,6 +247,9 @@ def songs_csv(shows, export_file = None):
 							row[key] = song[key].encode('ascii', 'ignore')
 						else:
 							row[key] = song[key]
+
+					for key in audio_summary:
+						row["audio_"+key] = song['audio_summary'][key]
 
 					row["lyrics_by"] = show["lyrics"].encode('ascii', 'ignore')
 					row["show_name"] = show["name"].encode('ascii', 'ignore')
@@ -213,55 +265,8 @@ def songs_csv(shows, export_file = None):
 
 	return results
 
-# Return a list (CSV) where each item (row) reperesents a show
-def shows_csv(shows, export_file = None):
-	results = []
 
-	show_data = [
-		"abstract",
-		"book",
-		"broadway",
-		"id",
-		# "lyrics",
-		"music",
-		# "name",
-		"off_broadway",
-		"on_dbpedia",
-		"page_name",
-		# "productions",
-		"song_count",
-		# "url",
-		"wiki_name",
-		"with_lyrics_count",
-		"without_lyrics_count",
-		"year"
-	]
-
-	for show in shows:
-		if show["without_lyrics_count"] == 0 and show["on_dbpedia"] == "true":
-			row = {}
-
-			for key in show_data:
-				if isinstance(show[key], basestring):
-					row[key] = show[key].encode('ascii', 'ignore')
-				else:
-					row[key] = show[key]
-
-			row["lyrics_by"] = show["lyrics"].encode('ascii', 'ignore')
-			row["show_name"] = show["name"].encode('ascii', 'ignore')
-			row["show_url"] = show["url"].encode('ascii', 'ignore')
-
-			results.append(row)
-
-	if export_file:
-		list_to_csv(results, export_file)
-
-	return results
-
-
-with open("../data/shows_w_spotify.json", 'r') as f:
+with open("../data/songs_w_echonest.json", 'r') as f:
 	shows = json.load(f)
 
-songs_csv(shows, export_file="../data/songs.csv")
-
-# shows_csv(shows, export_file="../data/shows.csv")
+songs_csv(shows, export_file="../data/songs_w_echonest.csv")
