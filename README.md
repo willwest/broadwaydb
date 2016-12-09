@@ -11,7 +11,7 @@ types of shows.
 * [Data Collection](#data-collection)
 
 # Blog Posts
-* [A Statistical Analysis of Broadway (and Off-Broadway) Musicals](http://willwest.me/a-statistical-analysis-of-broadway-and-off-broadway-musicals.html)
+* [A Statistical Analysis of Broadway (and Off-Broadway) Musicals](http://willwest.nyc/a-statistical-analysis-of-broadway-and-off-broadway-musicals.html)
 
 # Source
 This project currently consists of three modules:
